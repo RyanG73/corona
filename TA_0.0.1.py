@@ -35,19 +35,23 @@ states = ['Alabama','Arizona', 'Arkansas',
 ohio = ['Ohio']
 df = df[df['State'].isin(ohio)]
 df = df.sort_values('Date')
-df['daily_newcases'] = df.groupby('State')['Confirmed'].diff().fillna(0)
-df['rolling_newcases'] = df['daily_newcases'].rolling(window=7).mean()
-df['daily_deaths'] = df.groupby('State')['Deaths'].diff().fillna(0)
-df['rolling_deaths'] = df['daily_deaths'].rolling(window=7).mean()
-df['daily_recovered'] = df.groupby('State')['Recovered'].diff().fillna(0)
-df['rolling_recovered'] = df['daily_recovered'].rolling(window=7).mean()
-df['daily_tested'] = df.groupby('State')['People_Tested'].diff().fillna(0)
-df['rolling_tested'] = df['daily_tested'].rolling(window=7).mean()
-df['daily_hospitalized'] = df.groupby('State')['People_Hospitalized'].diff().fillna(0)
-df['rolling_hospitalized'] = df['daily_hospitalized'].rolling(window=7).mean()
-df['hospitalization_change'] = df.groupby('State')['rolling_hospitalized'].apply(lambda x: x.div(x.iloc[0]).subtract(7).mul(100))
-df = df.set_index('Date')
-
+df = df.reset_index(drop=True)
+df2 = pd.DataFrame()
+for i in states:
+    d = df.loc[df['State'] == i].copy()
+    d['daily_newcases'] = d['Confirmed'].diff().fillna(0)
+    d['rolling_newcases'] = d['daily_newcases'].rolling(window=7).mean()
+    d['daily_deaths'] = d['Deaths'].diff().fillna(0)
+    d['rolling_deaths'] = d['daily_deaths'].rolling(window=7).mean()
+    d['daily_recovered'] = d['Recovered'].diff().fillna(0)
+    d['rolling_recovered'] = d['daily_recovered'].rolling(window=7).mean()
+    d['daily_tested'] = d['People_Tested'].diff().fillna(0)
+    d['rolling_tested'] = d['daily_tested'].rolling(window=7).mean()
+    d['daily_hospitalized'] = d['People_Hospitalized'].diff().fillna(0)
+    d['rolling_hospitalized'] = d['daily_hospitalized'].rolling(window=7).mean()
+    d['hospitalization_change'] = d['rolling_hospitalized'] / d['rolling_hospitalized'].shift(7) - 1
+    df2 = df2.append(d)
+df2 = df2.set_index('Date')
 """
 sns.set_color_codes("pastel")
 for i in states:
@@ -61,15 +65,23 @@ for i in states:
 """
 
 fig, ax = plt.subplots()
-ax.plot(df.index,df["rolling_hospitalized"], color='Red', label='7-Day Rolling Average')
-ax.bar(df.index,df["daily_hospitalized"], color='Blue', label='Daily Count')
+ax.plot(df2.index,df2["rolling_hospitalized"], color='Red', label='7-Day Rolling Average')
+ax.bar(df2.index,df2["daily_hospitalized"], color='Blue', label='Daily Count')
 plt.xticks(rotation=45)
 ax.set_xlabel("Date")
 ax.set_ylabel("Number Hospitalized")
 ax.legend(loc='upper right')
-plt.title(str('Ohio'))
+plt.title(str(df['State'].unique()))
+
+
+axe = sns.lineplot(x=df2.index, y="hospitalization_change", data=df2)
+axe.axhline(0, ls='--',color='black')
+
 plt.show()
 
 writer = pd.ExcelWriter('data.xlsx', engine='xlsxwriter')
-df.to_excel(writer, sheet_name='Data', index=False)
+df2.to_excel(writer, sheet_name='Data', index=True)
 writer.save()
+
+# TODO: iron out charts
+# TODO: set up emails
