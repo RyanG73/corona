@@ -1,3 +1,4 @@
+# _____________________________________________________________________________ Imports
 import git
 import pandas as pd
 import numpy as np
@@ -11,9 +12,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from sklearn import preprocessing
 import matplotlib.dates as mdates
-
+# _____________________________________________________________________________ Time
 start_time = time.time()
 clock = time.strftime('%x')
 today = time.strftime('%x')
@@ -22,18 +22,17 @@ yesterday = dt.datetime.fromtimestamp(yesterday)
 yesterday = yesterday.strftime('%x')
 clock = clock.replace("/","_")
 
+# _____________________________________________________________________________ Github pull
 repo = git.Repo('/Users/ryangerda/PycharmProjects/corona/COVID-19')
 repo.remotes.origin.pull()
-
 path = r'/Users/ryangerda/PycharmProjects/corona/COVID-19/csse_covid_19_data/csse_covid_19_daily_reports_us' # use your path
 all_files = glob.glob(path + "/*.csv")
-li = []
 df = pd.concat((pd.read_csv(f) for f in all_files))
-
+# _____________________________________________________________________________ Census
 census = "/Users/ryangerda/PycharmProjects/corona/Census_2019.xlsx"
 census = pd.read_excel(census)
 
-
+# _____________________________________________________________________________ Clean Data
 df['Last_Update'] = pd.to_datetime(df['Last_Update']).dt.normalize()
 df = df.rename(columns={'Province_State':'State','Last_Update':'Date'})
 states = ['Alabama','Alaska','Arizona', 'Arkansas',
@@ -57,10 +56,10 @@ df = pd.merge(df,census[['Area',2019]],how='left',left_on='State',right_on='Area
 del df['Area']
 df = df.rename(columns={2019:'Population_2019'})
 df2 = pd.DataFrame()
-
+# _____________________________________________________________________________ Write excel file
 writer = pd.ExcelWriter(('COVID_' + str(clock) + '.xlsx'), engine='xlsxwriter')
 workbook = writer.book
-
+# _____________________________________________________________________________ create variables
 for i in states:
     i2 = [i]
     d = df[df['State'].isin(i2)].copy()
@@ -95,12 +94,13 @@ for i in states:
     d = d[(d['Date'] > '2020-04-20')]
     df2 = df2.append(d)
 
-
+# _____________________________________________________________________________ excel sheet
 data_chart2 = df2[['State','Date','rolling_case_index', 'rolling_hospitalization_index','rolling_death_index']]
 df2.to_excel(writer, sheet_name='Data', index=False)
 data_sheet = writer.sheets['Data']
 data_sheet.set_column(0,100,15)
 
+# _____________________________________________________________________________ Create Charts
 for i in states:
     i2 = [i]
     d2 = df2[df2['State'].isin(i2)].copy()
@@ -140,7 +140,6 @@ for i in states:
     # CHART 3
     fig, ax = plt.subplots(figsize=(6,6))
     ax.plot(d2['Date'], d2["hospitalization_change"], color='Red')
-    #axe = sns.lineplot(x=df2['Date'], y="hospitalization_change", data=df2)
     ax.axhline(0, ls='--',color='black')
     plt.xticks(rotation=20)
     ax.set_xlabel("Date")
@@ -186,10 +185,8 @@ for i in states:
     plt.xticks(rotation=20)
     ax.set_xlabel("Date")
     ax.set_ylabel("Index")
-    #ax.legend(loc='upper right')
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles=handles[1:], labels=labels[1:],loc='upper right', ncol=1,prop={'size': 6})
-    #plt.legend(loc='upper right', bbox_to_anchor=(1.25, 0.5), ncol=3)
     plt.title(str('Per Capita Index - ' + i ))
     x = dt.datetime(2020, 5, 1)
     plt.annotate('Overperforming expectations', xy=(mdates.date2num(x), .01))
@@ -200,16 +197,8 @@ for i in states:
     chart_sheet.insert_image('J30',filename)
     print(i)
 
-
-
-
-recent = df2['Date'].max().strftime('%x')
-
-
-
-
 writer.save()
-
+# _____________________________________________________________________________ Data for Email body
 df3 = df2[df2['Date'] == today]
 df3 = df3[['State','hospitalization_change']]
 df3 = df3.sort_values('State')
@@ -229,8 +218,8 @@ smallinc = df3[(df3['hospitalization_change'] < .25) & (df3['hospitalization_cha
 smalldec = df3[(df3['hospitalization_change'] < 0) & (df3['hospitalization_change'] >= -0.25)]
 bigdec = df3[df3['hospitalization_change'] < -0.25]
 notavail = df3[df3['hospitalization_change'].isnull()]
-
-# EMAIL _______________________________________________________________________________________________
+recent = df2['Date'].max().strftime('%x')
+# _____________________________________________________________________________ Email
 fromaddr = "ryangerda@gmail.com"
 #toaddr = ["ryangerda@gmail.com","JGerda@ta-petro.com","deryda@roadrunner.com","lscarasso@gmail.com"]
 toaddr = ["ryangerda@gmail.com"]
@@ -260,36 +249,20 @@ body = ("Attached is COVID data from Johns Hopkins University and was most recen
         " \n " + '''\n{}'''.format(df4.to_string()) +
         " \n \n States with highest hospitalization count yesterday: " +
         " \n " + '''\n{}'''.format(df5.to_string()))
-# attach the body with the msg instance
 msg.attach(MIMEText(body, 'plain'))
-# open the file to be sent
 filename = 'COVID_' + str(clock) + '.xlsx'
 attachment = open("/Users/ryangerda/PycharmProjects/corona/COVID_" + str(clock) + ".xlsx", "rb")
-# instance of MIMEBase and named as p
 p = MIMEBase('application', 'octet-stream')
-# To change the payload into encoded form
 p.set_payload((attachment).read())
-# encode into base64
 encoders.encode_base64(p)
 p.add_header('Content-Disposition', "attachment; filename= %s" % filename)
-# attach the instance 'p' to instance 'msg'
 msg.attach(p)
-# creates SMTP session
 s = smtplib.SMTP('smtp.gmail.com', 587)
-# start TLS for security
 s.starttls()
-# Authentication
 s.login(fromaddr, "rfvejwvbglccgepp")
-# Converts the Multipart msg into a string
 text = msg.as_string()
-# sending the mail
 s.sendmail(fromaddr, toaddr, text)
-# terminating the session
 s.quit()
 print('Email Sent!')
-
+# _____________________________________________________________________________ Finish
 print("--- %s minutes ---" % round((time.time() - start_time)/60,3))
-
-
-
-
