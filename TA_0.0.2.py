@@ -48,7 +48,6 @@ states = ['Alabama','Alaska','Arizona', 'Arkansas',
            'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah',
            'Vermont','Virginia', 'Washington',
            'West Virginia', 'Wisconsin', 'Wyoming']
-#states = ['West Virginia', 'Wisconsin']
 df = df[df['State'].isin(states)]
 df = df.sort_values('Date')
 df = df.reset_index(drop=True)
@@ -96,11 +95,77 @@ for i in states:
 
 # _____________________________________________________________________________ excel sheet
 data_chart2 = df2[['State','Date','rolling_case_index', 'rolling_hospitalization_index','rolling_death_index']]
+df2 = df2.drop(columns=['Lat', 'Long_','FIPS','UID', 'ISO3'])
 df2.to_excel(writer, sheet_name='Data', index=False)
 data_sheet = writer.sheets['Data']
 data_sheet.set_column(0,100,15)
 
-# _____________________________________________________________________________ Create Charts
+rolling_avg = '7-Day Rolling Average'
+daily_count = 'Daily Count'
+legend_loc = 'upper right'
+charts_path = 'charts/'
+# _____________________________________________________________________________ USA Charts
+usa = 'USA Total'
+df_usa = df2.groupby(['Date']).sum().reset_index()
+empty2 = pd.DataFrame()
+empty2.to_excel(writer, sheet_name=str(usa))
+chart_sheet = writer.sheets[str(usa)]
+chart_sheet.hide_gridlines(2)
+# CHART 1
+plt.figure(figsize=(6, 6))
+plt.plot(df_usa['Date'], df_usa["rolling_tested"], color='Red', label=rolling_avg)
+plt.bar(df_usa['Date'], df_usa["daily_tested"], color='Blue', label=daily_count)
+plt.xticks(rotation=20)
+plt.xlabel("Date")
+plt.ylabel("Number Tested")
+plt.legend(loc=legend_loc)
+plt.title(str('Testing - USA'))
+filename = charts_path + str(usa) + '_1.png'
+fig = plt.savefig(filename, bbox_inches='tight')
+plt.close('all')
+chart_sheet.insert_image('A30', filename)
+# CHART 2
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.plot(df_usa['Date'], df_usa["rolling_hospitalized"], color='Red', label=rolling_avg)
+ax.bar(df_usa['Date'], df_usa["daily_hospitalized"], color='Blue', label=daily_count)
+plt.xticks(rotation=20)
+ax.set_xlabel("Date")
+ax.set_ylabel("Number Hospitalized")
+ax.legend(loc=legend_loc)
+plt.title(str('Hospitalizations - USA'))
+filename = charts_path + str(usa) + '_2.png'
+fig = plt.savefig(filename, bbox_inches='tight')
+plt.close('all')
+chart_sheet.insert_image('J1', filename)
+# CHART 4
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.plot(df_usa['Date'], df_usa["rolling_newcases"], color='Red', label=rolling_avg)
+ax.bar(df_usa['Date'], df_usa["daily_newcases"], color='Blue', label=daily_count)
+plt.xticks(rotation=20)
+ax.set_xlabel("Date")
+ax.set_ylabel("Count")
+ax.legend(loc=legend_loc)
+plt.title(str('New Cases - USA'))
+filename = charts_path + str(usa) + '_4.png'
+fig = plt.savefig(filename, bbox_inches='tight')
+plt.close('all')
+chart_sheet.insert_image('J30', filename)
+# CHART 5
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.plot(df_usa['Date'], df_usa["rolling_deaths"], color='Red', label=rolling_avg)
+ax.bar(df_usa['Date'], df_usa["daily_deaths"], color='Blue', label=daily_count)
+plt.xticks(rotation=20)
+ax.set_xlabel("Date")
+ax.set_ylabel("Count")
+ax.legend(loc=legend_loc)
+plt.title(str('Deaths - USA'))
+filename = charts_path + str(usa) + '_5.png'
+fig = plt.savefig(filename, bbox_inches='tight')
+plt.close('all')
+chart_sheet.insert_image('A1', filename)
+
+print(usa)
+# _____________________________________________________________________________ State Charts
 for i in states:
     i2 = [i]
     d2 = df2[df2['State'].isin(i2)].copy()
@@ -111,32 +176,30 @@ for i in states:
     chart_sheet.hide_gridlines(2)
     # CHART 1
     plt.figure(figsize=(6,6))
-    plt.plot(d2['Date'],d2["rolling_tested"], color='Red', label='7-Day Rolling Average')
-    plt.bar(d2['Date'],d2["daily_tested"], color='Blue', label='Daily Count')
+    plt.plot(d2['Date'],d2["rolling_tested"], color='Red', label=rolling_avg)
+    plt.bar(d2['Date'],d2["daily_tested"], color='Blue', label=daily_count)
     plt.xticks(rotation=20)
     plt.xlabel("Date")
     plt.ylabel("Number Tested")
-    plt.legend(loc='upper right')
+    plt.legend(loc=legend_loc)
     plt.title(str('Testing - ' + i))
-    filename = 'charts/' + str(i) + '_1.png'
+    filename = charts_path + str(i) + '_1.png'
     fig = plt.savefig(filename,bbox_inches='tight')
     plt.close('all')
     chart_sheet.insert_image('A30', filename)
-    print(i)
     # CHART 2
     fig, ax = plt.subplots(figsize=(6,6))
-    ax.plot(d2['Date'],d2["rolling_hospitalized"], color='Red', label='7-Day Rolling Average')
-    ax.bar(d2['Date'],d2["daily_hospitalized"], color='Blue', label='Daily Count')
+    ax.plot(d2['Date'],d2["rolling_hospitalized"], color='Red', label=rolling_avg)
+    ax.bar(d2['Date'],d2["daily_hospitalized"], color='Blue', label=daily_count)
     plt.xticks(rotation=20)
     ax.set_xlabel("Date")
     ax.set_ylabel("Number Hospitalized")
-    ax.legend(loc='upper right')
+    ax.legend(loc=legend_loc)
     plt.title(str('Hospitalizations - ' + i))
-    filename = 'charts/' + str(i) + '_2.png'
+    filename = charts_path + str(i) + '_2.png'
     fig = plt.savefig(filename,bbox_inches='tight')
     plt.close('all')
     chart_sheet.insert_image('J1',filename)
-    print(i)
     # CHART 3
     fig, ax = plt.subplots(figsize=(6,6))
     ax.plot(d2['Date'], d2["hospitalization_change"], color='Red')
@@ -145,39 +208,36 @@ for i in states:
     ax.set_xlabel("Date")
     ax.set_ylabel("Percent Change")
     plt.title(str('7-Day Rolling Change in Hospitalization - ' + i))
-    filename = 'charts/' + str(i) + '_3.png'
+    filename = charts_path + str(i) + '_3.png'
     fig = plt.savefig(filename,bbox_inches='tight')
     plt.close('all')
     chart_sheet.insert_image('S30',filename)
-    print(i)
     # CHART 4
     fig, ax = plt.subplots(figsize=(6,6))
-    ax.plot(d2['Date'],d2["rolling_newcases"], color='Red', label='7-Day Rolling Average')
-    ax.bar(d2['Date'],d2["daily_newcases"], color='Blue', label='Daily Count')
+    ax.plot(d2['Date'],d2["rolling_newcases"], color='Red', label=rolling_avg)
+    ax.bar(d2['Date'],d2["daily_newcases"], color='Blue', label=daily_count)
     plt.xticks(rotation=20)
     ax.set_xlabel("Date")
     ax.set_ylabel("Count")
-    ax.legend(loc='upper right')
+    ax.legend(loc=legend_loc)
     plt.title(str('New Cases - ' + i))
-    filename = 'charts/' + str(i) + '_4.png'
+    filename = charts_path + str(i) + '_4.png'
     fig = plt.savefig(filename,bbox_inches='tight')
     plt.close('all')
     chart_sheet.insert_image('S1',filename)
-    print(i)
     # CHART 5
     fig, ax = plt.subplots(figsize=(6,6))
-    ax.plot(d2['Date'],d2["rolling_deaths"], color='Red', label='7-Day Rolling Average')
-    ax.bar(d2['Date'],d2["daily_deaths"], color='Blue', label='Daily Count')
+    ax.plot(d2['Date'],d2["rolling_deaths"], color='Red', label=rolling_avg)
+    ax.bar(d2['Date'],d2["daily_deaths"], color='Blue', label=daily_count)
     plt.xticks(rotation=20)
     ax.set_xlabel("Date")
     ax.set_ylabel("Count")
-    ax.legend(loc='upper right')
+    ax.legend(loc=legend_loc)
     plt.title(str('Deaths - ' + i))
-    filename = 'charts/' + str(i) + '_5.png'
+    filename = charts_path + str(i) + '_5.png'
     fig = plt.savefig(filename,bbox_inches='tight')
     plt.close('all')
     chart_sheet.insert_image('A1',filename)
-    print(i)
     # CHART 6
     fig, ax = plt.subplots(figsize=(6,6))
     p1 = sns.lineplot(x='Date', y='value', hue='variable',data=pd.melt(d3, ['State','Date']),legend='brief')
@@ -186,12 +246,12 @@ for i in states:
     ax.set_xlabel("Date")
     ax.set_ylabel("Index")
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles=handles[1:], labels=labels[1:],loc='upper right', ncol=1,prop={'size': 6})
+    ax.legend(handles=handles[1:], labels=labels[1:],loc=legend_loc, ncol=1,prop={'size': 6})
     plt.title(str('Per Capita Index - ' + i ))
     x = dt.datetime(2020, 5, 1)
     plt.annotate('Overperforming expectations', xy=(mdates.date2num(x), .01))
     plt.annotate('Underperforming expectations', xy=(mdates.date2num(x), .99))
-    filename = 'charts/' + str(i) + '_6.png'
+    filename = charts_path + str(i) + '_6.png'
     fig = plt.savefig(filename,bbox_inches='tight')
     plt.close('all')
     chart_sheet.insert_image('J30',filename)
@@ -213,6 +273,10 @@ df5 = df5[['State','daily_hospitalized']]
 df5 = df5.sort_values('daily_hospitalized',ascending=False).head()
 df5 = df5.set_index('State')
 
+df6 = df2[df2['Date'] == yesterday]
+dd = df6['daily_deaths'].sum()
+dd = round(dd)
+
 biginc = df3[df3['hospitalization_change'] >= .25]
 smallinc = df3[(df3['hospitalization_change'] < .25) & (df3['hospitalization_change'] >= 0)]
 smalldec = df3[(df3['hospitalization_change'] < 0) & (df3['hospitalization_change'] >= -0.25)]
@@ -221,8 +285,8 @@ notavail = df3[df3['hospitalization_change'].isnull()]
 recent = df2['Date'].max().strftime('%x')
 # _____________________________________________________________________________ Email
 fromaddr = "ryangerda@gmail.com"
-#toaddr = ["ryangerda@gmail.com","JGerda@ta-petro.com","deryda@roadrunner.com","lscarasso@gmail.com"]
-toaddr = ["ryangerda@gmail.com"]
+toaddr = ["ryangerda@gmail.com","JGerda@ta-petro.com","DGerda@ta-petro.com"]
+#toaddr = ["ryangerda@gmail.com"]
 
 # instance of MIMEMultipart
 msg = MIMEMultipart()
@@ -235,6 +299,7 @@ msg['Subject'] = "COVID Data Daily Update " + clock
 # string to store the body of the mail
 body = ("Attached is COVID data from Johns Hopkins University and was most recently published on " + recent +
         " \n \n WARNING: This data is only as good as the data states make available. There are instances when a week's worth of data is dumped at once, causing dramatic swings or inconsistencies." +
+        " \n \n Yesterday on " + yesterday + " there were " + str(dd) + " deaths in the United States." +
         " \n \n States where the 7-day rolling hospitalization has increased by more than 25%: " +
         " \n " + ' \n '.join(biginc['State'].tolist()) +
         " \n \n States where the 7-day rolling hospitalization has increased by 0-25%: " +
@@ -266,3 +331,5 @@ s.quit()
 print('Email Sent!')
 # _____________________________________________________________________________ Finish
 print("--- %s minutes ---" % round((time.time() - start_time)/60,3))
+
+
