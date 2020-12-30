@@ -1,3 +1,9 @@
+#### /usr/local/bin/python3.8 -m pip install Cython
+### PATH=$PATH:/home/pi/.local/bin;export $PATH
+### sudo apt-get install libxml2-dev libxslt-dev python-dev
+################ source env/bin/activate
+#################### source /home/pi/PycharmProjects/pythonProject/venvr/bin/activate
+
 # _____________________________________________________________________________ Imports
 import git
 import pandas as pd
@@ -23,13 +29,13 @@ yesterday = yesterday.strftime('%x')
 clock = clock.replace("/","_")
 
 # _____________________________________________________________________________ Github pull
-repo = git.Repo('/Users/ryangerda/PycharmProjects/corona/COVID-19')
+repo = git.Repo('/corona/COVID-19')
 repo.remotes.origin.pull()
-path = r'/Users/ryangerda/PycharmProjects/corona/COVID-19/csse_covid_19_data/csse_covid_19_daily_reports_us' # use your path
+path = r'/corona/COVID-19/csse_covid_19_data/csse_covid_19_daily_reports_us' # use your path
 all_files = glob.glob(path + "/*.csv")
 df = pd.concat((pd.read_csv(f) for f in all_files))
 # _____________________________________________________________________________ Census
-census = "/Users/ryangerda/PycharmProjects/corona/Census_2019.xlsx"
+census = "/corona/Census_2019.xlsx"
 census = pd.read_excel(census)
 
 # _____________________________________________________________________________ Clean Data
@@ -316,7 +322,7 @@ body = ("Attached is COVID data from Johns Hopkins University and was most recen
         " \n " + '''\n{}'''.format(df5.to_string()))
 msg.attach(MIMEText(body, 'plain'))
 filename = 'COVID_' + str(clock) + '.xlsx'
-attachment = open("/Users/ryangerda/PycharmProjects/corona/COVID_" + str(clock) + ".xlsx", "rb")
+attachment = open("/COVID_" + str(clock) + ".xlsx", "rb")
 p = MIMEBase('application', 'octet-stream')
 p.set_payload((attachment).read())
 encoders.encode_base64(p)
